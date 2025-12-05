@@ -34,6 +34,10 @@ class AuctionResult(BaseModel):
     price: float
 
 
+class BidRequest(BaseModel):
+    supply_id: str
+
+
 class BidderStatistics(BaseModel):
     wins: int
     total_revenue: float

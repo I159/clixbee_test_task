@@ -1,11 +1,13 @@
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 
 from ad_exchange_auction.core.models import (
     AuctionResult,
+    BidRequest,
     BidderStatistics,
     IdentifiedBidderStatistics,
     SupplyStatistics,
 )
+from ad_exchange_auction.core.auction import Auction
 from ad_exchange_auction.core.rate_limiter import check_rate_limit, record_request
 from ad_exchange_auction.core.repository import BidderRepository, SupplyRepository
 
@@ -30,8 +32,23 @@ async def rate_limit_dependency(request: Request):
 
 
 @app.post("/bid")
-async def bid(supply_id: str, _: None = Depends(rate_limit_dependency)) -> AuctionResult:
-    return AuctionResult(winner="bidder1", price=0.50)
+async def bid(
+    request: Request,
+    bid_request: BidRequest,
+    x_country: str = Header(...),
+    _: None = Depends(rate_limit_dependency)
+) -> AuctionResult:
+    try:
+        auction = Auction(
+            supply_id=bid_request.supply_id,
+            country=x_country,
+            supply_repo=request.app.state.supply_repository,
+            bidder_repo=request.app.state.bidder_repository
+        )
+        auction.run()
+        return auction.get_result()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/stat")
