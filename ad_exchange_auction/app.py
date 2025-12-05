@@ -7,8 +7,17 @@ from ad_exchange_auction.core.models import (
     SupplyStatistics,
 )
 from ad_exchange_auction.core.rate_limiter import check_rate_limit, record_request
+from ad_exchange_auction.core.repository import BidderRepository, SupplyRepository
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+def startup_event():
+    app.state.supply_repository = SupplyRepository()
+    app.state.bidder_repository = BidderRepository()
+    app.state.supply_repository.load()
+    app.state.bidder_repository.load()
 
 
 def rate_limit_dependency(request: Request):

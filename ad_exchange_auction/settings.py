@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     
     rate_limit_window_seconds: int = 60
     rate_limit_max_requests: int = 3
+    
+    data_file_path: str = "ad_exchange_auction/data/data.json"
 
 
 settings = Settings()
