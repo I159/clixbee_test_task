@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 
 from ad_exchange_auction.core.models import (
@@ -10,6 +12,7 @@ from ad_exchange_auction.core.models import (
 from ad_exchange_auction.core.auction import Auction
 from ad_exchange_auction.core.rate_limiter import check_rate_limit, record_request
 from ad_exchange_auction.core.repository import BidderRepository, SupplyRepository
+from ad_exchange_auction.core.statistics import get_all_statistics
 
 app = FastAPI()
 
@@ -59,24 +62,8 @@ async def bid(
 
 
 @app.get("/stat")
-async def stat() -> dict[str, SupplyStatistics]:
-    return {
-        "supply1": SupplyStatistics(
-            total_requests=10,
-            requests_per_country={"US": 6, "GB": 4},
-            bidders=[
-                IdentifiedBidderStatistics(
-                    bidder_id="bidder1",
-                    statistics=BidderStatistics(
-                        wins=3, total_revenue=1.50, no_bids=2
-                    ),
-                ),
-                IdentifiedBidderStatistics(
-                    bidder_id="bidder2",
-                    statistics=BidderStatistics(
-                        wins=2, total_revenue=0.80, no_bids=3
-                    ),
-                ),
-            ],
-        )
-    }
+async def stat(request: Request) -> dict[str, SupplyStatistics]:
+    if request.app.state.pending_stats_tasks:
+        await asyncio.gather(*request.app.state.pending_stats_tasks, return_exceptions=True)
+    
+    return await get_all_statistics(request.app.state.supply_repository)
