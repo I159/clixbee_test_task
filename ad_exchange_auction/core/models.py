@@ -1,3 +1,4 @@
+import random
 from enum import Enum
 
 from pydantic import BaseModel
@@ -11,6 +12,11 @@ class Country(Enum):
 class Bidder(BaseModel):
     id: str
     country: Country
+
+    def place_bid(self) -> float | None:
+        if random.random() < 0.3:
+            return None
+        return round(random.uniform(0.01, 1.00), 2)
 
 
 class Supply(BaseModel):

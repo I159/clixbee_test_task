@@ -20,13 +20,13 @@ def startup_event():
     app.state.bidder_repository.load()
 
 
-def rate_limit_dependency(request: Request):
+async def rate_limit_dependency(request: Request):
     client_ip = request.client.host
 
-    if not check_rate_limit(client_ip):
+    if not await check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    record_request(client_ip)
+    await record_request(client_ip)
 
 
 @app.post("/bid")

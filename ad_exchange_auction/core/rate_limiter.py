@@ -18,20 +18,20 @@ from ad_exchange_auction.redis_client import redis_client
 from ad_exchange_auction.settings import settings
 
 
-def check_rate_limit(ip_address: str) -> bool:
+async def check_rate_limit(ip_address: str) -> bool:
     key = f"rate_limit:{ip_address}"
     current_time = time.time()
     window_start = current_time - settings.rate_limit_window_seconds
 
-    redis_client.zremrangebyscore(key, 0, window_start)
-    request_count = redis_client.zcard(key)
+    await redis_client.zremrangebyscore(key, 0, window_start)
+    request_count = await redis_client.zcard(key)
 
     return request_count < settings.rate_limit_max_requests
 
 
-def record_request(ip_address: str):
+async def record_request(ip_address: str):
     key = f"rate_limit:{ip_address}"
     current_time = time.time()
 
-    redis_client.zadd(key, {str(current_time): current_time})
-    redis_client.expire(key, settings.rate_limit_window_seconds)
+    await redis_client.zadd(key, {str(current_time): current_time})
+    await redis_client.expire(key, settings.rate_limit_window_seconds)
