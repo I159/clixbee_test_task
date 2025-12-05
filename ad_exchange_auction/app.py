@@ -20,6 +20,7 @@ def startup_event():
     app.state.bidder_repository = BidderRepository()
     app.state.supply_repository.load()
     app.state.bidder_repository.load()
+    app.state.pending_stats_tasks = set()
 
 
 async def rate_limit_dependency(request: Request):
@@ -46,7 +47,13 @@ async def bid(
             bidder_repo=request.app.state.bidder_repository
         )
         auction.run()
-        return auction.get_result()
+        result = auction.get_result()
+        
+        task = auction.record_stats_async()
+        request.app.state.pending_stats_tasks.add(task)
+        task.add_done_callback(lambda t: request.app.state.pending_stats_tasks.discard(t))
+        
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
