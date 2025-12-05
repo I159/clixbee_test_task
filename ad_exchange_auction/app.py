@@ -13,12 +13,14 @@ from ad_exchange_auction.core.auction import Auction
 from ad_exchange_auction.core.rate_limiter import check_rate_limit, record_request
 from ad_exchange_auction.core.repository import BidderRepository, SupplyRepository
 from ad_exchange_auction.core.statistics import get_all_statistics
+from ad_exchange_auction.logging_config import configure_logging, get_logger
 
 app = FastAPI()
 
 
 @app.on_event("startup")
 def startup_event():
+    configure_logging()
     app.state.supply_repository = SupplyRepository()
     app.state.bidder_repository = BidderRepository()
     app.state.supply_repository.load()
@@ -43,11 +45,14 @@ async def bid(
     _: None = Depends(rate_limit_dependency)
 ) -> AuctionResult:
     try:
+        log = get_logger().bind(supply_id=bid_request.supply_id, country=x_country)
+        
         auction = Auction(
             supply_id=bid_request.supply_id,
             country=x_country,
             supply_repo=request.app.state.supply_repository,
-            bidder_repo=request.app.state.bidder_repository
+            bidder_repo=request.app.state.bidder_repository,
+            logger=log
         )
         auction.run()
         result = auction.get_result()
