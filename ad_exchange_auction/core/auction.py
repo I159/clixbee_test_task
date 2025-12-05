@@ -6,19 +6,28 @@ from ad_exchange_auction.core.statistics import record_auction_stats
 
 
 class Auction:
-    def __init__(self, supply_id: str, country: str, supply_repo: SupplyRepository, bidder_repo: BidderRepository, logger=None):
+    def __init__(
+        self,
+        supply_id: str,
+        country: str,
+        supply_repo: SupplyRepository,
+        bidder_repo: BidderRepository,
+        logger=None,
+    ):
         self.supply_id = supply_id
         self.country = country
         self.logger = logger
         country_filter = Country(country)
-        
+
         bidder_ids = supply_repo.get(supply_id)
         if bidder_ids is None:
             raise ValueError(f"Supply {supply_id} not found")
-        
+
         self._eligible_bidders = [
-            bidder for bidder_id in bidder_ids
-            if (bidder := bidder_repo.get(bidder_id)) and bidder.country == country_filter
+            bidder
+            for bidder_id in bidder_ids
+            if (bidder := bidder_repo.get(bidder_id))
+            and bidder.country == country_filter
         ]
         self._bids: dict[str, float] = {}
         self._winner_id: str | None = None
@@ -26,8 +35,10 @@ class Auction:
 
     def run(self):
         if self.logger:
-            self.logger.info("auction_started", eligible_bidder_count=len(self._eligible_bidders))
-        
+            self.logger.info(
+                "auction_started", eligible_bidder_count=len(self._eligible_bidders)
+            )
+
         for bidder in self._eligible_bidders:
             price = bidder.place_bid()
             if price is not None:
@@ -40,14 +51,16 @@ class Auction:
             else:
                 if self.logger:
                     self.logger.info("no_bid", bidder_id=bidder.id)
-        
+
         if self.logger and self._winner_id:
-            self.logger.info("auction_completed", winner=self._winner_id, price=self._winner_price)
+            self.logger.info(
+                "auction_completed", winner=self._winner_id, price=self._winner_price
+            )
 
     def get_result(self) -> AuctionResult:
-        if self._winner_id is None:
+        if self._winner_id is None or self._winner_price is None:
             raise ValueError("No valid bids received")
-        
+
         return AuctionResult(winner=self._winner_id, price=self._winner_price)
 
     def record_stats_async(self):
@@ -58,6 +71,6 @@ class Auction:
                 winner_id=self._winner_id,
                 winner_price=self._winner_price,
                 bids=self._bids,
-                eligible_bidders=self._eligible_bidders
+                eligible_bidders=self._eligible_bidders,
             )
         )

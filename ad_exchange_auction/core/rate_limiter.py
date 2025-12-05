@@ -12,6 +12,7 @@ Each request timestamp is stored in a Redis sorted set with the timestamp as the
 Before counting, we remove all timestamps older than the window, ensuring accurate
 rate limiting over any rolling time period.
 """
+
 import time
 
 from ad_exchange_auction.redis_client import redis_client

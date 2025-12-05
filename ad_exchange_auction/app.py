@@ -29,6 +29,9 @@ def startup_event():
 
 
 async def rate_limit_dependency(request: Request):
+    if request.client is None:
+        raise HTTPException(status_code=400, detail="Unable to determine client IP")
+    
     client_ip = request.client.host
 
     if not await check_rate_limit(client_ip):
@@ -42,25 +45,27 @@ async def bid(
     request: Request,
     bid_request: BidRequest,
     x_country: str = Header(...),
-    _: None = Depends(rate_limit_dependency)
+    _: None = Depends(rate_limit_dependency),
 ) -> AuctionResult:
     try:
         log = get_logger().bind(supply_id=bid_request.supply_id, country=x_country)
-        
+
         auction = Auction(
             supply_id=bid_request.supply_id,
             country=x_country,
             supply_repo=request.app.state.supply_repository,
             bidder_repo=request.app.state.bidder_repository,
-            logger=log
+            logger=log,
         )
         auction.run()
         result = auction.get_result()
-        
+
         task = auction.record_stats_async()
         request.app.state.pending_stats_tasks.add(task)
-        task.add_done_callback(lambda t: request.app.state.pending_stats_tasks.discard(t))
-        
+        task.add_done_callback(
+            lambda t: request.app.state.pending_stats_tasks.discard(t)
+        )
+
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -69,6 +74,8 @@ async def bid(
 @app.get("/stat")
 async def stat(request: Request) -> dict[str, SupplyStatistics]:
     if request.app.state.pending_stats_tasks:
-        await asyncio.gather(*request.app.state.pending_stats_tasks, return_exceptions=True)
-    
+        await asyncio.gather(
+            *request.app.state.pending_stats_tasks, return_exceptions=True
+        )
+
     return await get_all_statistics(request.app.state.supply_repository)
