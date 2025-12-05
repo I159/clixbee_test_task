@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
 
 from ad_exchange_auction.core.models import (
     AuctionResult,
@@ -6,12 +6,22 @@ from ad_exchange_auction.core.models import (
     IdentifiedBidderStatistics,
     SupplyStatistics,
 )
+from ad_exchange_auction.core.rate_limiter import check_rate_limit, record_request
 
 app = FastAPI()
 
 
+def rate_limit_dependency(request: Request):
+    client_ip = request.client.host
+
+    if not check_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    record_request(client_ip)
+
+
 @app.post("/bid")
-async def bid(supply_id: str) -> AuctionResult:
+async def bid(supply_id: str, _: None = Depends(rate_limit_dependency)) -> AuctionResult:
     return AuctionResult(winner="bidder1", price=0.50)
 
 
