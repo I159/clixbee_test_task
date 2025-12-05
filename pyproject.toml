@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ad-exchange-auction"
+version = "0.1.0"
+description = "Simplified Ad Exchange Auction Service"
+authors = []
+
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = "^0.123.0"
+uvicorn = {extras = ["standard"], version = "^0.38.0"}
+pydantic = "^2.12.0"
+pydantic-settings = "^2.6.0"
+redis = "^5.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+httpx = "^0.28.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
