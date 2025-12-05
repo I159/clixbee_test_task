@@ -10,4 +10,4 @@ COPY . .
 
 RUN poetry config virtualenvs.create false && poetry install --only main --no-interaction --no-ansi
 
-CMD ["uvicorn", "ad_exchange_auction.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "ad_exchange_auction.app:app", "--host", "0.0.0.0", "--workers", "3", "--port", "8000"]
