@@ -2,14 +2,14 @@ import asyncio
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 
+from ad_exchange_auction.core.auction import Auction
 from ad_exchange_auction.core.models import (
     AuctionResult,
-    BidRequest,
     BidderStatistics,
+    BidRequest,
     IdentifiedBidderStatistics,
     SupplyStatistics,
 )
-from ad_exchange_auction.core.auction import Auction
 from ad_exchange_auction.core.rate_limiter import check_rate_limit, record_request
 from ad_exchange_auction.core.repository import BidderRepository, SupplyRepository
 from ad_exchange_auction.core.statistics import get_all_statistics
@@ -31,7 +31,7 @@ def startup_event():
 async def rate_limit_dependency(request: Request):
     if request.client is None:
         raise HTTPException(status_code=400, detail="Unable to determine client IP")
-    
+
     client_ip = request.client.host
 
     if not await check_rate_limit(client_ip):
@@ -62,9 +62,7 @@ async def bid(
 
         task = auction.record_stats_async()
         request.app.state.pending_stats_tasks.add(task)
-        task.add_done_callback(
-            lambda t: request.app.state.pending_stats_tasks.discard(t)
-        )
+        task.add_done_callback(lambda t: request.app.state.pending_stats_tasks.discard(t))
 
         return result
     except ValueError as e:
@@ -74,8 +72,6 @@ async def bid(
 @app.get("/stat")
 async def stat(request: Request) -> dict[str, SupplyStatistics]:
     if request.app.state.pending_stats_tasks:
-        await asyncio.gather(
-            *request.app.state.pending_stats_tasks, return_exceptions=True
-        )
+        await asyncio.gather(*request.app.state.pending_stats_tasks, return_exceptions=True)
 
     return await get_all_statistics(request.app.state.supply_repository)

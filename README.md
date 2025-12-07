@@ -75,28 +75,6 @@ Client → Rate Limiter → Auction → Statistics Recording
 
 Statistics recording is asynchronous to avoid blocking the auction response:
 
-**Architecture:**
-- Each auction spawns a background task via `asyncio.create_task()`
-- Tasks are stored in global `app.state.pending_stats_tasks` set
-- Redis keys structured as `stats:{supply_id}:{metric}` for atomic increments
-- `/stat` endpoint waits for pending tasks via `asyncio.gather()` before reading
-- Tasks self-remove from set via `add_done_callback()` on completion
-
-**Design rationale:**
-- Auction completes immediately without waiting for Redis I/O
-- `/stat` ensures all in-flight updates complete before aggregating results
-- Shared pending tasks set prevents race conditions between writes and reads
-- Statistics are eventually consistent with minimal lag
-
-**Trade-off:**
-- `/stat` endpoint may wait briefly if many auctions are in-flight
-- Alternative would be message queue for higher scale
-
-**5. Data Repositories (`core/repository.py`)**
-- In-memory storage loaded from JSON at startup
-- `SupplyRepository`: Maps supply IDs to eligible bidder IDs
-- `BidderRepository`: Stores bidder metadata (ID, country)
-
 ## Scaling
 
 ### Already Implemented
